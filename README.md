@@ -1,112 +1,129 @@
-Teamblind Data Scraper
-=====================
 
-This project is a FastAPI application for scraping data from Teamblind.
+# TeamBlind Review Scraper
+A robust, container-ready FastAPI microservice that scrapes employee reviews from [TeamBlind.com](https://www.teamblind.com/) for any company, using resilient session management and a date-range query interface.
 
-## Running the Application
+---
 
-You have two options to run the application:
+## 🚀 Features
 
-### Option 1: Using Docker Compose
+- **Scrape reviews by company code** for any employer on TeamBlind
+- **Specify a date range** (`start_date`, `last_date`) to fetch reviews only within that window
+- **Automatic session and cookie handling** with Playwright and curl_cffi
+- **Auto-relogin and retry** on session expiry or network error (robust_request)
+- **Modern async FastAPI backend**—easily deployable and scalable
+- **Structured API response:** overall company review stats + detailed review list
 
-1. Make sure you have Docker and Docker Compose installed on your system
-2. Create a `.env` file with the required environment variables (including `PORT`)
-3. Run the following command:
+---
+
+
+## ⚡️ Quickstart
+
+### 1. **Clone and Install**
 
 ```bash
-docker compose up --build
-```
+git clone https://github.com/yourusername/teamblind-data-scraper.git
+cd teamblind-data-scraper
+pip install -r requirements.txt
+````
 
-This will build the Docker image and start the application. The API will be available at `http://localhost:$PORT`.
+### 2. **Configure Environment**
 
-### Option 2: Running Directly with Uvicorn
+* Edit `app/core/config.py` with your credentials:
 
-1. Install the required dependencies (make sure you have Python installed)
-2. Run the following command:
+  * `TEAMBLIND_USER_EMAIL`
+  * `TEAMBLIND_USER_PASS`
+  * Custom `User_Agent`, etc.
+
+> **Never commit your real credentials to source control!**
+
+### 3. **Run the Service**
 
 ```bash
 uvicorn main:app --reload
 ```
 
-By default, this will start the server on `http://localhost:8000`. The `--reload` flag enables auto-reload on code changes, which is useful during development.
+Or use Docker:
 
-## Environment Variables
-
-Create a `.env` file in the root directory, you can copy the `.env.example` file:
-```env
-PORT=8000
-EMAIL=dummy.user@example.com
-PASSWORD=dummypassword123
+```bash
+docker-compose up --build
 ```
 
-Make sure to replace the dummy credentials with your actual Teamblind account credentials.
+---
 
-## API Documentation
+## 🔗 API Usage
 
-The main entrypoint is `main.py`.
-API endpoints are available under `/api/v1/`.
+### **POST** `/api/v1/reviews`
 
-Once the application is running, you can access:
-- Interactive API documentation (Swagger UI) at `/docs`
-- Alternative API documentation (ReDoc) at `/redoc`
+**Request Body:**
 
-## API Examples
-
-### Scraping Company Reviews
-
-**Endpoint**: `POST /api/v1/scrape`
-
-**Input Example**:
 ```json
 {
-  "company_code": "Microsoft",
-  "max_page": 2
+  "company_code": "Synopsys",
+  "start_date": "2024-01-01",
+  "last_date": "2023-01-01"
 }
 ```
 
-**Parameters**:
-- `company_code`: The company identifier from Teamblind (e.g., "Microsoft", "Google", etc.)
-- `max_page`: Number of pages to scrape (must be greater than 0)
+* `company_code`: String, TeamBlind's URL alias for the company (e.g., `"Google"`, `"Meta"`, `"Synopsys"`)
+* `start_date`: Fetch reviews **from this date** (inclusive, format: `YYYY-MM-DD`)
+* `last_date`: Fetch reviews **down to this date** (inclusive)
 
-**Output Example**:
+**Response Example:**
+
 ```json
 {
   "overall_review": {
-    "companyName": "Microsoft",
-    "companyUrlAlias": "Microsoft",
-    "count": 11174,
-    "career": "3.5",
-    "balance": "4.2",
-    "compensation": "3.2",
-    "culture": "3.9",
-    "management": "3.5",
-    "rating": "3.9"
+    "companyName": "Synopsys",
+    "companyUrlAlias": "Synopsys",
+    "count": 393,
+    "career": "3.1",
+    "balance": "3.9",
+    "compensation": "2.9",
+    "culture": "3.5",
+    "management": "3.2",
+    "rating": "3.5"
   },
   "reviews": [
     {
-      "overall": 3,
-      "career": 3,
+      "overall": 4,
+      "career": 4,
       "balance": 4,
-      "compensation": 3,
+      "compensation": 4,
       "culture": 4,
-      "management": 3,
-      "summary": "Great work life balance",
-      "pros": "Great work life balance compared to other organizations in the same sector",
-      "cons": "Compensation isn't as great compared to companies of other size",
+      "management": 4,
+      "summary": "Good",
+      "pros": "...",
+      "cons": "...",
       "reasonResign": null,
-      "createdAt": "2025-04-29T04:48:06.000Z"
-    }
+      "createdAt": "2024-04-18T04:12:03.000Z"
+    },
+    ...
   ]
 }
 ```
 
-The response includes:
-1. `overall_review`: Aggregate statistics for the company
-   - Company information
-   - Average ratings across different categories
-   - Total review count
-2. `reviews`: Array of individual reviews with:
-   - Individual category ratings
-   - Summary, pros, and cons
-   - Creation date
-   - Reason for resignation (if provided)
+---
+
+## 🛡️ Resilience and Retry
+
+* **Auto-relogin:** If TeamBlind session expires, login is retried seamlessly.
+* **Retry logic:** All review-fetch requests are wrapped for network and auth reliability.
+* **Cookie storage:** Cookies are saved to `auth_state.json` for reuse.
+
+---
+
+## 🧰 Development & Customization
+
+* All main logic is in `app/utils/playwright_utils.py` and `app/api/v1/reviews.py`
+* To adjust scraping structure, see the JSON path in `reviews.py`
+* For rate limits or proxies, extend the request logic as needed
+
+---
+
+## ❗ Disclaimer
+
+* This tool is for educational, research, or authorized internal use only.
+* Use responsibly and in accordance with TeamBlind’s Terms of Service.
+
+---
+

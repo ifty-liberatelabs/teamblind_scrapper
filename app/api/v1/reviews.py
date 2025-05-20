@@ -10,6 +10,18 @@ import os  # <--- ADDED
 
 ReviewRouter = APIRouter()
 
+
+def get_unique_folder_name(base_name):
+    if not os.path.exists(base_name):
+        return base_name
+    i = 1
+    while True:
+        new_name = f"{base_name}_{i}"
+        if not os.path.exists(new_name):
+            return new_name
+        i += 1
+
+
 @ReviewRouter.post("/reviews", response_model=ReviewResponse)
 async def get_reviews(request: ReviewRequest):
     try:
@@ -37,7 +49,8 @@ async def get_reviews(request: ReviewRequest):
         reached_cutoff = False
 
         # --- FOLDER SETUP ---
-        folder_name = request.company_code
+        folder_name = get_unique_folder_name(request.company_code)
+        os.makedirs(folder_name)
         if not os.path.exists(folder_name):
             os.makedirs(folder_name)
 

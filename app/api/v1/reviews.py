@@ -6,6 +6,7 @@ from app.core.config import settings, logger
 from curl_cffi import requests
 import json
 from datetime import datetime
+import os  # <--- ADDED
 
 ReviewRouter = APIRouter()
 
@@ -34,6 +35,11 @@ async def get_reviews(request: ReviewRequest):
 
         PAGE = 1
         reached_cutoff = False
+
+        # --- FOLDER SETUP ---
+        folder_name = request.company_code
+        if not os.path.exists(folder_name):
+            os.makedirs(folder_name)
 
         while not reached_cutoff:
             REVIEWS_URL = (
@@ -76,6 +82,12 @@ async def get_reviews(request: ReviewRequest):
                 logger.error(f"Data structure error: {e}")
                 raise HTTPException(status_code=500, detail="Unexpected data structure in review response.")
 
+            # --- SAVE OVERALL REVIEW ON FIRST PAGE ONLY ---
+            if PAGE == 1:
+                with open(os.path.join(folder_name, "page_0.json"), "w", encoding="utf-8") as f:
+                    json.dump(overall_review, f, ensure_ascii=False, indent=2)
+
+            page_reviews = []
             if reviews:
                 for review in reviews:
                     review_obj = Model(**review).model_dump()
@@ -83,6 +95,10 @@ async def get_reviews(request: ReviewRequest):
                     # Include only reviews within the requested date range
                     if request.last_date <= created_at <= request.start_date:
                         all_reviews.append(review_obj)
+                        page_reviews.append(review_obj)
+                # --- SAVE THIS PAGE'S REVIEWS ---
+                with open(os.path.join(folder_name, f"page_{PAGE}.json"), "w", encoding="utf-8") as f:
+                    json.dump(page_reviews, f, ensure_ascii=False, indent=2)
                 # Check last review's createdAt for stopping condition
                 last_review_date = datetime.fromisoformat(reviews[-1]["createdAt"].replace("Z", "+00:00")).date()
                 if last_review_date < request.last_date:
